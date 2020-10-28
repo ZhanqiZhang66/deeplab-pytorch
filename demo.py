@@ -143,6 +143,7 @@ def single(config_path, model_path, image_path, cuda, crf):
     torch.set_grad_enabled(False)
 
     classes = get_classtable(CONFIG)
+    #print(classes)
     postprocessor = setup_postprocessor(CONFIG) if crf else None
 
     model = eval(CONFIG.MODEL.NAME)(n_classes=CONFIG.DATASET.N_CLASSES)
@@ -158,9 +159,10 @@ def single(config_path, model_path, image_path, cuda, crf):
     labelmap = inference(model, image, raw_image, postprocessor)
     labels = np.unique(labelmap)
 
+
     # Show result for each class
     rows = np.floor(np.sqrt(len(labels) + 1))
-    cols = np.ceil((len(labels) + 1) / rows)
+    cols = np.ceil((len(labels) + 2) / rows)
 
     plt.figure(figsize=(10, 10))
     ax = plt.subplot(rows, cols, 1)
@@ -168,17 +170,42 @@ def single(config_path, model_path, image_path, cuda, crf):
     ax.imshow(raw_image[:, :, ::-1])
     ax.axis("off")
 
+    h,w = np.shape(raw_image)[0], np.shape(raw_image)[1]
+
+    animal_mask = np.zeros([h,w])
+    animal_labels = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    #person bird car dog horse sheep cow elephant bear zebra giraffe
     for i, label in enumerate(labels):
         mask = labelmap == label
+        if label in animal_labels:
+            animal_mask = np.logical_or(animal_mask, mask)
+            #print('animal mask ', animal_mask)
         ax = plt.subplot(rows, cols, i + 2)
         ax.set_title(classes[label])
         ax.imshow(raw_image[..., ::-1])
         ax.imshow(mask.astype(np.float32), alpha=0.5)
         ax.axis("off")
+    #print(animal_mask)
+    ax = plt.subplot(rows, cols, i + 2)
+    ax.set_title("animal mask")
+    ax.imshow(raw_image[:, :, ::-1])
+    ax.imshow(animal_mask.astype(np.float32), alpha=0.5)
+    ax.axis("off")
 
     plt.tight_layout()
-    plt.show()
 
+    import os
+    import scipy.io
+    animal_mask_fl32 = animal_mask.astype(np.float32)
+    mypath = os.path.abspath(__file__)[0:-7]
+    myfile_img = image_path.split('/',1)[1]
+    myfile_mat = myfile_img[0:-4] + '.mat'
+
+    mypath = mypath  + '\output_img'
+    mypath_mat = mypath + '\\' + myfile_mat
+    scipy.io.savemat(mypath_mat, mdict={'geese': animal_mask_fl32})
+    plt.savefig(os.path.join(mypath, myfile_img))
+    plt.show()
 
 @main.command()
 @click.option(
