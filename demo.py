@@ -57,7 +57,9 @@ def setup_postprocessor(CONFIG):
 
 def preprocessing(image, device, CONFIG):
     # Resize
-    scale = CONFIG.IMAGE.SIZE.TEST / max(image.shape[:2])
+    #print(CONFIG.IMAGE.SIZE.TEST)
+    #scale = CONFIG.IMAGE.SIZE.TEST / max(image.shape[:2])
+    scale = 715 / max(image.shape[:2])
     image = cv2.resize(image, dsize=None, fx=scale, fy=scale)
     raw_image = image.astype(np.uint8)
 
@@ -155,6 +157,7 @@ def single(config_path, model_path, image_path, cuda, crf):
 
     # Inference
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    print(np.shape(image))
     image, raw_image = preprocessing(image, device, CONFIG)
     labelmap = inference(model, image, raw_image, postprocessor)
     labels = np.unique(labelmap)
@@ -171,7 +174,7 @@ def single(config_path, model_path, image_path, cuda, crf):
     ax.axis("off")
 
     h,w = np.shape(raw_image)[0], np.shape(raw_image)[1]
-
+    print(h,w)
     animal_mask = np.zeros([h,w])
     animal_labels = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
     #person bird car dog horse sheep cow elephant bear zebra giraffe
@@ -201,9 +204,9 @@ def single(config_path, model_path, image_path, cuda, crf):
     myfile_img = image_path.split('/',1)[1]
     myfile_mat = myfile_img[0:-4] + '.mat'
 
-    mypath = mypath  + '\output_img'
+    mypath = mypath  + '\output_heatmaps'
     mypath_mat = mypath + '\\' + myfile_mat
-    scipy.io.savemat(mypath_mat, mdict={'geese': animal_mask_fl32})
+    scipy.io.savemat(mypath_mat, mdict={'small_human': animal_mask_fl32}) #the name cannot have space!
     plt.savefig(os.path.join(mypath, myfile_img))
     plt.show()
 
