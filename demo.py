@@ -157,7 +157,7 @@ def single(config_path, model_path, image_path, cuda, crf):
     model.to(device)
     print("Model:", CONFIG.MODEL.NAME)
 
-    # Locate Image Input dir
+    # Locate Image Input Folder to iteratively readin image
     Picture_dir_List = [image_path + file for file in os.listdir(image_path) if file.endswith('.png')]
     # Inference
     for img_path in Picture_dir_List:
