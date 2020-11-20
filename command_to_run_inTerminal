@@ -1,3 +1,3 @@
-python demo.py single --config-path configs/cocostuff164k.yaml --model-path deeplabv2_resnet101_msc-cocostuff164k-100000.pth --image-path images/cat-red-cute-mackerel_16_backg.jpg
+python demo.py single --config-path configs/cocostuff164k.yaml --model-path deeplabv2_resnet101_msc-cocostuff164k-100000.pth --image-path heatmap_pictures/cat-red-cute-mackerel_16_backg.png
 
 python demo.py single --config-path configs/voc12.yaml --model-path deeplabv2_resnet101_msc-vocaug-20000.pth --image-path images/pexels-photo-146094._16_backg.jpg
