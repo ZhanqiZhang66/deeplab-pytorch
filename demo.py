@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
-# Modifed by Victoria Zhang
 # Author: Kazuto Nakashima
 # modified by: Victoria Zhang
 # URL:    https://kazuto1011.github.io
 # Date:   07 January 2019
+# Purpose: This code will iteratively read in pictures in folder, do segmentation based on pre-trained config file, and combine the 
+#          segmentaions that include animal/human classes into a merged class. 
+#          The class-segmented masks (tree, human, water, bird, bear, desk, etc) will be saved as a .png file.
+#          The merged mask will be saved at a .mat file.
+#          
 
 from __future__ import absolute_import, division, print_function
 
