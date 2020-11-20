@@ -2,6 +2,7 @@
 # coding: utf-8
 #
 # Author: Kazuto Nakashima
+# modified by: Victoria Zhang
 # URL:    https://kazuto1011.github.io
 # Date:   07 January 2019
 
@@ -20,7 +21,7 @@ from omegaconf import OmegaConf
 
 from libs.models import *
 from libs.utils import DenseCRF
-
+import os
 
 def get_device(cuda):
     cuda = cuda and torch.cuda.is_available()
@@ -134,18 +135,19 @@ def main(ctx):
     "--cuda/--cpu", default=True, help="Enable CUDA if available [default: --cuda]"
 )
 @click.option("--crf", is_flag=True, show_default=True, help="CRF post-processing")
+
+
 def single(config_path, model_path, image_path, cuda, crf):
     """
     Inference from a single image
     """
-
+    import os
     # Setup
     CONFIG = OmegaConf.load(config_path)
     device = get_device(cuda)
     torch.set_grad_enabled(False)
 
     classes = get_classtable(CONFIG)
-    #print(classes)
     postprocessor = setup_postprocessor(CONFIG) if crf else None
 
     model = eval(CONFIG.MODEL.NAME)(n_classes=CONFIG.DATASET.N_CLASSES)
@@ -155,60 +157,64 @@ def single(config_path, model_path, image_path, cuda, crf):
     model.to(device)
     print("Model:", CONFIG.MODEL.NAME)
 
+    # Locate Image Input dir
+    Picture_dir_List = [image_path + file for file in os.listdir(image_path) if file.endswith('.png')]
     # Inference
-    image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-    print(np.shape(image))
-    image, raw_image = preprocessing(image, device, CONFIG)
-    labelmap = inference(model, image, raw_image, postprocessor)
-    labels = np.unique(labelmap)
+    for img_path in Picture_dir_List:
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        image, raw_image = preprocessing(image, device, CONFIG)
+        labelmap = inference(model, image, raw_image, postprocessor)
+        labels = np.unique(labelmap)
 
 
-    # Show result for each class
-    rows = np.floor(np.sqrt(len(labels) + 1))
-    cols = np.ceil((len(labels) + 2) / rows)
+        # Show result for each class
+        rows = np.floor(np.sqrt(len(labels) + 1))
+        cols = np.ceil((len(labels) + 2) / rows)
 
-    plt.figure(figsize=(10, 10))
-    ax = plt.subplot(rows, cols, 1)
-    ax.set_title("Input image")
-    ax.imshow(raw_image[:, :, ::-1])
-    ax.axis("off")
-
-    h,w = np.shape(raw_image)[0], np.shape(raw_image)[1]
-    print(h,w)
-    animal_mask = np.zeros([h,w])
-    animal_labels = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-    #person bird car dog horse sheep cow elephant bear zebra giraffe
-    for i, label in enumerate(labels):
-        mask = labelmap == label
-        if label in animal_labels:
-            animal_mask = np.logical_or(animal_mask, mask)
-            #print('animal mask ', animal_mask)
-        ax = plt.subplot(rows, cols, i + 2)
-        ax.set_title(classes[label])
-        ax.imshow(raw_image[..., ::-1])
-        ax.imshow(mask.astype(np.float32), alpha=0.5)
+        plt.figure(figsize=(10, 10))
+        ax = plt.subplot(rows, cols, 1)
+        ax.set_title("Input image")
+        ax.imshow(raw_image[:, :, ::-1])
         ax.axis("off")
-    #print(animal_mask)
-    ax = plt.subplot(rows, cols, i + 2)
-    ax.set_title("animal mask")
-    ax.imshow(raw_image[:, :, ::-1])
-    ax.imshow(animal_mask.astype(np.float32), alpha=0.5)
-    ax.axis("off")
 
-    plt.tight_layout()
+        h,w = np.shape(raw_image)[0], np.shape(raw_image)[1]
+        print(h,w)
+        print(img_path)
+        animal_mask = np.zeros([h,w])
+        animal_labels = [0, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+        #person bird car dog horse sheep cow elephant bear zebra giraffe
+        for i, label in enumerate(labels):
+            mask = labelmap == label
+            if label in animal_labels:
+                animal_mask = np.logical_or(animal_mask, mask)
+                #print('animal mask ', animal_mask)
+            ax = plt.subplot(rows, cols, i + 2)
+            ax.set_title(classes[label])
+            ax.imshow(raw_image[..., ::-1])
+            ax.imshow(mask.astype(np.float32), alpha=0.5)
+            ax.axis("off")
+        #print(animal_mask)
+        ax = plt.subplot(rows, cols, i + 2)
+        ax.set_title("animal mask")
+        ax.imshow(raw_image[:, :, ::-1])
+        ax.imshow(animal_mask.astype(np.float32), alpha=0.5)
+        ax.axis("off")
 
-    import os
-    import scipy.io
-    animal_mask_fl32 = animal_mask.astype(np.float32)
-    mypath = os.path.abspath(__file__)[0:-7]
-    myfile_img = image_path.split('/',1)[1]
-    myfile_mat = myfile_img[0:-4] + '.mat'
+        plt.tight_layout()
 
-    mypath = mypath  + '\output_heatmaps'
-    mypath_mat = mypath + '\\' + myfile_mat
-    scipy.io.savemat(mypath_mat, mdict={'small_human': animal_mask_fl32}) #the name cannot have space!
-    plt.savefig(os.path.join(mypath, myfile_img))
-    plt.show()
+        import os
+        import scipy.io
+        animal_mask_fl32 = animal_mask.astype(np.float32)
+        mypath = os.path.abspath(__file__)[0:-7]
+        myfile_img = img_path.split('/', 1)[1]
+        myfile_mat = myfile_img[0:-4] + '.mat'
+
+        mypath = mypath  + '\output_heatmaps'
+        mypath_mat = mypath + '\\' + myfile_mat
+        scipy.io.savemat(mypath_mat, mdict={'semantic_mask': animal_mask_fl32}) #the name cannot have space!
+        plt.savefig(os.path.join(mypath, myfile_img))
+        plt.show()
+
 
 @main.command()
 @click.option(
